@@ -1,6 +1,20 @@
 import requests
 
 
+class SavedFile(object):
+    def __init__(self, path, encoding):
+        self._path = path
+        self._encoding = encoding
+
+    @property
+    def path(self):
+        return self._path
+
+    @property
+    def encoding(self):
+        return self._encoding
+
+
 class VenDevCommand(object):
 
     def _save_as(self, url, path=None):
@@ -19,10 +33,31 @@ class VenDevCommand(object):
 
         self.stdout.write(self.style.SUCCESS('  {}KiB Done!'.format(size*0.5)))
 
-        return path
+        return SavedFile(path, r.encoding)
+
+    def _parse_vendor_id(self, line):
+        return line[:4]
 
     def _parse_vendor(self, line):
         return line[:4], line[4:].strip()
+
+    def _parse_device(self, line):
+        return line[1:5], line[5:].strip()
+
+    def _add_usb_device(self, model, vendor, did, dname):
+        try:
+            obj, created = model.objects.get_or_create(
+                vendor=vendor,
+                device_id=did,
+                defaults={'name': dname}
+            )
+
+            if not created and obj.name != dname and obj.is_updatable:
+                obj.name = dname
+                obj.save()
+
+        except:
+            self._failed_dev.append((vendor.pk, vendor.name, did, dname))
 
     def _add_vendor(self, model, vid, vname):
         try:
@@ -36,16 +71,18 @@ class VenDevCommand(object):
                 obj.save()
 
         except:
-            self._failed.append((vid, vname))
+            self._failed_ven.append((vid, vname))
 
-    def _update_vendors(self, path, vpattern, model):
-        self._failed = []
+    def _update_vendors(self, saved_file, vpattern, model):
+        self._failed_ven = []
         s_lines = 0
         s_vendors = 0
 
-        self.stdout.write('Processing vendors in {} ...'.format(path))
+        self.stdout.write(
+            'Processing vendors in {} ...'.format(saved_file.path)
+        )
 
-        with open(path, 'r') as fp:
+        with open(saved_file.path, 'r', encoding=saved_file.encoding) as fp:
             for line in fp:
                 if line.startswith('C'):
                     # Comienzo de definiciones de clases de dispositivos
@@ -64,10 +101,10 @@ class VenDevCommand(object):
                     self._add_vendor(model, vendor_id, vendor_name)
 
         msg = '  {} Lines; {} Vendors; Done!'.format(s_lines, s_vendors)
-        if len(self._failed) > 0:
+        if len(self._failed_ven) > 0:
             self.stdout.write(self.style.WARNING(msg))
             self.stdout.write(self.style.WARNING(
-                '  Failed vendors: {}'.format(self._failed)
+                '  Failed vendors: {}'.format(self._failed_ven)
             ))
 
         else:
