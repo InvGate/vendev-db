@@ -1,5 +1,5 @@
 from django.contrib import admin
-from vendors.models import PCIVendor, PCIDevice, USBVendor, USBDevice
+from vendors.models import PCIVendor, PCIDevice
 
 @admin.register(PCIVendor)
 class PCIVendorAdmin(admin.ModelAdmin):
@@ -7,12 +7,4 @@ class PCIVendorAdmin(admin.ModelAdmin):
 
 @admin.register(PCIDevice)
 class PCIDeviceAdmin(admin.ModelAdmin):
-    pass
-
-@admin.register(USBVendor)
-class USBVendorAdmin(admin.ModelAdmin):
-    pass
-
-@admin.register(USBDevice)
-class USBDeviceAdmin(admin.ModelAdmin):
     pass
