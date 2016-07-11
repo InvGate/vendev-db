@@ -15,7 +15,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         url = 'http://pciids.sourceforge.net/v2.2/pci.ids'
         saved_file = self._save_as(url, '/tmp/pci.ids')
-        #self._update_vendors(saved_file)
+        self._update_vendors(saved_file)
         self._update_devices(saved_file)
 
     def _save_as(self, url, path=None):
