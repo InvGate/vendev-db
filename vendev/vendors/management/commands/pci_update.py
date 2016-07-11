@@ -15,8 +15,8 @@ class Command(BaseCommand, VenDevCommand):
     def handle(self, *args, **options):
         url = 'http://pciids.sourceforge.net/v2.2/pci.ids'
         saved_file = self._save_as(url, '/tmp/pci.ids')
-        self._update_vendors(saved_file)
-        self._update_devices(saved_file)
+        self._update_vendors(saved_file, vendor_pattern, PCIVendor)
+        #self._update_devices(saved_file)
 
     def _update_devices(self, path):
         with open(path, 'r') as fp:
@@ -54,48 +54,3 @@ class Command(BaseCommand, VenDevCommand):
                         device_id=device_id,
                         defaults={'name': device_name}
                     )
-
-    def _update_vendors(self, path):
-        stats = {
-            'lines': 0,
-            'vendors': 0,
-            'created_vendors': 0,
-            'updated_vendors': 0,
-            'ignored_vendors': 0,
-            'untouched_vendors': 0
-        }
-
-        with open(path, 'r') as fp:
-            for line in fp:
-                stats['lines'] += 1
-
-                if vendor_pattern.match(line):
-                    stats['vendors'] += 1
-
-                    vendor_id = line[:4]
-                    vendor_name = line[4:].strip()
-
-                    obj, created = PCIVendor.objects.get_or_create(
-                        vendor_id=vendor_id,
-                        defaults={'name': vendor_name}
-                    )
-
-                    if created:
-                        stats['created_vendors'] += 1
-
-                    elif obj.name != vendor_name:
-                        if obj.is_updatable:
-                            obj.name = vendor_name
-                            obj.save()
-                            stats['updated_vendors'] += 1
-                        else:
-                            stats['ignored_vendors'] += 1
-
-        stats['untouched_vendors'] = (
-            stats['vendors'] - stats['created_vendors'] -
-            stats['updated_vendors'] - stats['ignored_vendors']
-        )
-
-        self.stdout.write(self.style.SUCCESS(stats))
-
-        return stats
