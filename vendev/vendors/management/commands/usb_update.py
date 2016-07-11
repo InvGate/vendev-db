@@ -1,20 +1,19 @@
 from django.core.management.base import BaseCommand
 from vendors.management.vendev_tools import VenDevCommand
 import re
-from vendors.models import PCIVendor, PCIDevice
+from vendors.models import USBVendor, USBDevice
 
 
 vendor_pattern = re.compile('^[\w]{4}')
 device_pattern = re.compile('^(\t){1}')
-sub_pattern = re.compile('^(\t){2}')
 
 
 class Command(BaseCommand, VenDevCommand):
-    help = 'Lookup for PCI IDS updates'
+    help = 'Lookup for USB IDS updates'
 
     def handle(self, *args, **options):
-        url = 'http://pciids.sourceforge.net/v2.2/pci.ids'
-        saved_file = self._save_as(url, '/tmp/pci.ids')
+        url = 'http://www.linux-usb.org/usb.ids'
+        saved_file = self._save_as(url, '/tmp/usb.ids')
         self._update_vendors(saved_file)
         self._update_devices(saved_file)
 
@@ -26,31 +25,14 @@ class Command(BaseCommand, VenDevCommand):
 
                 if vendor_pattern.match(line):
                     vendor_id = line[:4]
-                    vendor = PCIVendor.objects.get(pk=vendor_id)
-
-                elif sub_pattern.match(line):
-                    line_chunks = line.split()
-                    sub_vendor_id, sub_device_id = line_chunks[:2]
-                    sub_name = ' '.join(line_chunks[2:])
-
-                    sub_vendor = PCIVendor.objects.get(
-                        vendor_id=dev.vendor_id
-                    )
-
-                    obj, created = PCIDevice.objects.get_or_create(
-                        vendor=sub_vendor,
-                        chipset=dev,
-                        device_id=sub_device_id,
-                        defaults={'name': sub_name}
-                    )
+                    vendor = USBVendor.objects.get(pk=vendor_id)
 
                 elif device_pattern.match(line):
                     device_id = line[1:5]
                     device_name = line[5:].strip()
 
-                    dev, created = PCIDevice.objects.get_or_create(
+                    dev, created = USBDevice.objects.get_or_create(
                         vendor=vendor,
-                        chipset=None,
                         device_id=device_id,
                         defaults={'name': device_name}
                     )
@@ -67,6 +49,9 @@ class Command(BaseCommand, VenDevCommand):
 
         with open(path, 'r') as fp:
             for line in fp:
+                if line.startswith('C'):
+                    break
+
                 stats['lines'] += 1
 
                 if vendor_pattern.match(line):
@@ -75,7 +60,7 @@ class Command(BaseCommand, VenDevCommand):
                     vendor_id = line[:4]
                     vendor_name = line[4:].strip()
 
-                    obj, created = PCIVendor.objects.get_or_create(
+                    obj, created = USBVendor.objects.get_or_create(
                         vendor_id=vendor_id,
                         defaults={'name': vendor_name}
                     )
