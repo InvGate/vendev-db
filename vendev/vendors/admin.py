@@ -8,7 +8,7 @@ class PCIVendorAdmin(admin.ModelAdmin):
         'vendor_id', 'name', 'is_updatable', 'created_at',
         'updated_at'
     ]
-    search_fields = ['name']
+    search_fields = ['vendor_id', 'name']
 
 
 @admin.register(PCIDevice)
