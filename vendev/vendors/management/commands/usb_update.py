@@ -47,8 +47,13 @@ class Command(BaseCommand, VenDevCommand):
                     ), ending='\r')
 
                     device_id, device_name = self._parse_device(line)
-                    self._add_usb_device(USBDevice, vendor, device_id,
-                                         device_name)
+                    data = {
+                        'vendor': vendor,
+                        'device_id': device_id,
+                        'defaults': {'name': device_name}
+                    }
+                    self._add_or_update(USBDevice, data, device_name,
+                                        self._failed_dev)
 
         msg = '  {} Lines; {} Devices; Done!'.format(s_lines, s_devices)
         if len(self._failed_dev) > 0:

@@ -44,34 +44,22 @@ class VenDevCommand(object):
     def _parse_device(self, line):
         return line[1:5], line[5:].strip()
 
-    def _add_usb_device(self, model, vendor, did, dname):
-        try:
-            obj, created = model.objects.get_or_create(
-                vendor=vendor,
-                device_id=did,
-                defaults={'name': dname}
-            )
+    def _parse_subsystem(self, line):
+        line_chunks = line.split()
+        sub_vendor_id, sub_device_id = line_chunks[:2]
+        sub_device_name = ' '.join(line_chunks[2:])
+        return sub_vendor_id, sub_device_id, sub_device_name
 
-            if not created and obj.name != dname and obj.is_updatable:
-                obj.name = dname
+    def _add_or_update(self, model, data, new_value, failed_list):
+        try:
+            obj, created = model.objects.get_or_create(**data)
+
+            if not created and obj.name != new_value and obj.is_updatable:
+                obj.name = new_value
                 obj.save()
 
         except:
-            self._failed_dev.append((vendor.pk, vendor.name, did, dname))
-
-    def _add_vendor(self, model, vid, vname):
-        try:
-            obj, created = model.objects.get_or_create(
-                vendor_id=vid,
-                defaults={'name': vname}
-            )
-
-            if not created and obj.name != vname and obj.is_updatable:
-                obj.name = vname
-                obj.save()
-
-        except:
-            self._failed_ven.append((vid, vname))
+            failed_list.append(data)
 
     def _update_vendors(self, saved_file, vpattern, model):
         self._failed_ven = []
@@ -98,7 +86,12 @@ class VenDevCommand(object):
                     ), ending='\r')
 
                     vendor_id, vendor_name = self._parse_vendor(line)
-                    self._add_vendor(model, vendor_id, vendor_name)
+                    data = {
+                        'vendor_id': vendor_id,
+                        'defaults': {'name': vendor_name}
+                    }
+                    self._add_or_update(model, data, vendor_name,
+                                        self._failed_ven)
 
         msg = '  {} Lines; {} Vendors; Done!'.format(s_lines, s_vendors)
         if len(self._failed_ven) > 0:
